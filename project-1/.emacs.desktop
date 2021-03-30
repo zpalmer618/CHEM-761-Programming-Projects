@@ -1,0 +1,79 @@
+;; -*- mode: emacs-lisp; lexical-binding:t; coding: utf-8-emacs; -*-
+;; --------------------------------------------------------------------------
+;; Desktop File for Emacs
+;; --------------------------------------------------------------------------
+;; Created Thu Jan 21 20:35:40 2021
+;; Desktop file format version 208
+;; Emacs version 27.1
+
+;; Global section:
+(setq desktop-saved-frameset [frameset 1 (24586 14844 357917 0) (desktop . "208") "zach_home@Zachs-MBP.attlocal.net" nil nil ((((minibuffer . t) (fontsize . 0) (font . "-*-Menlo-normal-normal-normal-*-12-*-*-*-m-0-iso10646-1") (border-width . 0) (internal-border-width . 2) (right-divider-width . 0) (bottom-divider-width . 0) (vertical-scroll-bars) (horizontal-scroll-bars) (foreground-color . "Black") (background-color . "White") (line-spacing) (left-fringe . 8) (right-fringe . 8) (no-special-glyphs) (undecorated) (ns-appearance . unbound) (ns-transparent-titlebar . unbound) (z-group) (no-focus-on-map) (no-accept-focus) (menu-bar-lines . 1) (tool-bar-lines . 0) (title) (icon-type) (auto-raise) (auto-lower) (cursor-type . box) (scroll-bar-width . 15) (scroll-bar-height . 15) (alpha) (fullscreen) (display-type . color) (background-mode . light) (cursor-color . "black") (environment) (last-focus-update . t) (tabs (current-tab (name . "main.go") (explicit-name))) (frameset--id . "6A78-D74B-B345-4E2C") (frameset--mini t . t) (height . 54) (width . 202) (modeline . t) (unsplittable) (left . 0) (top . 31) (icon-name) (visibility . t) (display . "hst000534261um.wifi04.olemiss.edu") (explicit-name) (tool-bar-position . top)) ((min-height . 8) (min-width . 10) (min-height-ignore . 4) (min-width-ignore . 5) (min-height-safe . 2) (min-width-safe . 2) (min-pixel-height . 112) (min-pixel-width . 70) (min-pixel-height-ignore . 56) (min-pixel-width-ignore . 35) (min-pixel-height-safe . 28) (min-pixel-width-safe . 14)) vc (pixel-width . 1430) (pixel-height . 742) (total-width . 204) (total-height . 53) (normal-height . 1.0) (normal-width . 1.0) (combination-limit) (leaf (pixel-width . 1430) (pixel-height . 555) (total-width . 204) (total-height . 40) (normal-height . 0.7489878542510121) (normal-width . 1.0) (buffer "main.go" (selected . t) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 0 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 2804) (start . 1691)) (prev-buffers ("init.el" 766 1216) ("main.go" 1691 2804) ("main_test.go" 1 432) ("*shell*" 1 422))) (leaf (last . t) (pixel-width . 1430) (pixel-height . 187) (total-width . 204) (total-height . 13) (normal-height . 0.25101214574898767) (normal-width . 1.0) (buffer "*compilation*" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 0 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 1) (start . 1)) (prev-buffers ("*compilation*" 1 1) ("init.el" 766 1216)))))])
+(setq desktop-missing-file-warning nil)
+(setq tags-file-name nil)
+(setq tags-table-list nil)
+(setq search-ring nil)
+(setq regexp-search-ring '(#("atoms" 0 5 (isearch-regexp-function nil isearch-case-fold-search nil)) #("\\_<Atom\\_>" 0 10 (isearch-case-fold-search nil))))
+(setq register-alist '((48 . #("	ezij := -(i.z-j.z)/bonddist(atoms[i], atoms[j])\n" 0 1 (fontified t rear-nonsticky t yank-handler (evil-yank-line-handler nil t)) 1 2 (face font-lock-variable-name-face fontified t yank-handler (evil-yank-line-handler nil t)) 2 5 (face font-lock-variable-name-face fontified t yank-handler (evil-yank-line-handler nil t)) 5 12 (fontified t yank-handler (evil-yank-line-handler nil t)) 12 13 (fontified t yank-handler (evil-yank-line-handler nil t)) 13 14 (fontified t yank-handler (evil-yank-line-handler nil t)) 14 17 (fontified t yank-handler (evil-yank-line-handler nil t)) 17 18 (fontified t yank-handler (evil-yank-line-handler nil t)) 18 20 (fontified t yank-handler (evil-yank-line-handler nil t)) 20 28 (face font-lock-function-name-face fontified t yank-handler (evil-yank-line-handler nil t)) 28 37 (fontified t yank-handler (evil-yank-line-handler nil t)) 37 47 (fontified t yank-handler (evil-yank-line-handler nil t)) 47 48 (fontified t yank-handler (evil-yank-line-handler nil t)) 48 49 (fontified t yank-handler (evil-yank-line-handler nil t))))))
+(setq file-name-history '("/Users/zach_home/go-modules/chem761/project-1" "~/go-modules/chem761/project-1/main_test.go" "~/go-modules/chem761/project-1/main.go" "~/.emacs.d/init.el" "~/go-modules/hello.go"))
+
+;; Buffer section -- buffers listed in same order as in buffer list:
+(desktop-create-buffer 208
+  "/Users/zach_home/go-modules/chem761/project-1/main.go"
+  "main.go"
+  'go-mode
+  '(company-mode undo-tree-mode helm-mode)
+  2804
+  '(2802 nil)
+  nil
+  nil
+  '((indent-tabs-mode . t) (buffer-display-time 24586 14828 134080 0) (buffer-file-coding-system . utf-8-unix) (overwrite-mode))
+  '((mark-ring (3045 3045 3045 3049 3049 3049 3049 3049 2358 2026 2021 1939 1934 3049 3049 3049))))
+
+(desktop-create-buffer 208
+  "/Users/zach_home/.emacs.d/init.el"
+  "init.el"
+  'emacs-lisp-mode
+  '(eldoc-mode undo-tree-mode helm-mode)
+  1216
+  '(1195 nil)
+  nil
+  nil
+  '((buffer-display-time 24586 14812 44243 0) (buffer-file-coding-system . prefer-utf-8-unix) (overwrite-mode))
+  '((mark-ring (1193 1131 1128 1091 417 417 417 269 261 888 962 1 1 949))))
+
+(desktop-create-buffer 208
+  "/Users/zach_home/go-modules/chem761/project-1/main_test.go"
+  "main_test.go"
+  'go-mode
+  '(company-mode undo-tree-mode helm-mode)
+  432
+  '(552 nil)
+  nil
+  nil
+  '((indent-tabs-mode . t) (buffer-display-time 24586 7692 417338 0) (buffer-file-coding-system . undecided-unix) (overwrite-mode))
+  '((mark-ring (548 562 562 114 67 58 1 54 616 432))))
+
+(desktop-create-buffer 208
+  "/Users/zach_home/go-modules/hello.go"
+  "hello.go"
+  'go-mode
+  '(company-mode undo-tree-mode helm-mode)
+  48
+  '(14 nil)
+  nil
+  nil
+  '((indent-tabs-mode . t) (buffer-display-time 24585 55797 331509 0) (buffer-file-coding-system . undecided-unix) (overwrite-mode))
+  '((mark-ring (135 140 89))))
+
+(desktop-create-buffer 208
+  "/Users/zach_home/.emacs.d/elpa/evil-20210109.807/evil-vars.el"
+  "evil-vars.el"
+  'emacs-lisp-mode
+  '(eldoc-mode undo-tree-mode helm-mode)
+  67571
+  '(nil nil)
+  nil
+  nil
+  '((buffer-display-time 24585 55130 735154 0) (buffer-file-coding-system . utf-8-unix) (overwrite-mode))
+  '((mark-ring nil)))
+

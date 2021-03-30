@@ -1,0 +1,140 @@
+/*
+   Project 2:
+   Harmonic Vibrational Analysis
+*/
+
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
+	"math"
+
+	"sort"
+
+	"gonum.org/v1/gonum/mat"
+)
+
+type Atom struct {
+	charge  int
+	x, y, z float64
+}
+
+var mass = []float64{
+	1: 1.007_825_032_23,
+	6: 12,
+	8: 15.994_914_619_57,
+}
+
+func geomparse(filename string) []Atom {
+	input, _ := os.Open(filename)
+	defer input.Close()
+
+	scan := bufio.NewScanner(input)
+
+	atoms := make([]Atom, 0)
+
+	for i := 0; scan.Scan(); i++ {
+		if i > 0 {
+			line := scan.Text()
+			slice := strings.Fields(line)
+			vbucks := make([]float64, 0)
+			charge := make([]int, 0)
+
+			for i, boi := range slice {
+				if i == 0 {
+					atomnum, _ := strconv.Atoi(strings.Trim(boi, ".0"))
+					charge = append(charge, atomnum)
+				} else {
+					v, _ := strconv.ParseFloat(boi, 64)
+					vbucks = append(vbucks, v)
+				}
+			}
+			atoms = append(atoms, Atom{
+				charge: charge[0],
+				x:      vbucks[0],
+				y:      vbucks[1],
+				z:      vbucks[2],
+			})
+		}
+	}
+	return atoms
+}
+
+func hessparse(filename string) []float64 {
+	input, _ := os.Open(filename)
+	defer input.Close()
+
+	scanner := bufio.NewScanner(input)
+
+	secderivs := make([]float64, 0)
+
+	for i := 0; scanner.Scan(); i++ {
+		if i > 0 {
+			xyz := scanner.Text()
+			slicey := strings.Fields(xyz)
+
+			for _, elem := range slicey {
+				h, _ := strconv.ParseFloat(elem, 64)
+				secderivs = append(secderivs, h)
+			}
+		}
+	}
+	// fmt.Println(secderivs)
+	return secderivs
+}
+
+func maketrix(atoms []Atom, secderivs []float64) (freq1, freq2, freq3, freq4, freq5, freq6, freq7, freq8, freq9 float64) {
+	masses := make([]float64, 0)
+	dim := 3 * len(atoms)
+	matrix := mat.NewDense(dim, dim, secderivs)
+	for _, atom := range atoms {
+		weight := mass[atom.charge] // atom is the stuff at the index of "_" at the beginning of the for loop. If "i" is used to index the weight would be atoms[i].charge
+		masses = append(masses, weight, weight, weight)
+	}
+	for i := 0; i < dim; i++ {
+		for j := 0; j < dim; j++ {
+			mimj := math.Sqrt(masses[i] * masses[j])
+			matrix.Set(i, j, matrix.At(i, j)/mimj)
+		}
+		// fmt.Println(matrix.RowView(i))
+	}
+	var eig mat.Eigen
+	eival := make([]float64, 0)
+	eig.Factorize(matrix, mat.EigenLeft)
+	e := eig.Values(nil)
+	for _, value := range e {
+		// fmt.Println(real(value))
+		eival = append(eival, real(value))
+		//fmt.Println(eival)
+	}
+	freqs := make([]float64, 0)
+	for _, num := range eival {
+		freq := math.Sqrt(num) * 5140.484 // / (2.998e10 * 1.66e-27)
+		freqs = append(freqs, freq)
+	}
+	sort.Float64s(eival)
+	sort.Float64s(freqs)
+	fmt.Println(eival)
+	//fmt.Println(freqs)
+	return freqs[0], freqs[1], freqs[2], freqs[3], freqs[4], freqs[5], freqs[6], freqs[7], freqs[8]
+}
+
+func main() {
+	outfile, _ := os.Create("main.out")
+	os.Stdout = outfile
+	atoms := geomparse("geom.dat")
+	fmt.Println("Atoms")
+	fmt.Println(atoms)
+	hess := hessparse("hess.dat")
+	//fmt.Println("Hessian Matrix")
+	//fmt.Println(hess)
+	fmt.Println("Eigenvalues from Hessian Matrix")
+	w1, w2, w3, w4, w5, w6, w7, w8, w9 := maketrix(atoms, hess)
+	fmt.Println("Harmonic Vibrational Frequencies (cm^-1)")
+	fmt.Printf("%5.0f\n %5.0f\n %5.0f\n %5.0f\n %5.0f\n %5.0f\n %5.0f\n %5.0f\n %5.0f\n", w1, w2, w3, w4, w5, w6, w7, w8, w9)
+}

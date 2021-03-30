@@ -1,0 +1,353 @@
+/*
+Project 1:
+Molecular Geometry Analysis
+*/
+
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"math"
+	"os"
+	"strconv"
+	"strings"
+
+	"sort"
+
+	"gonum.org/v1/gonum/mat"
+)
+
+type Atom struct { // Creates a structure that contains fields: charge, x, y, z. Stores data for a single atom. Combines multiple variables under one name "Atom"
+	charge  int
+	x, y, z float64
+}
+
+var mass = []float64{ //creates a slice containing the atomic masses of each atom specific to this geom.dat file to be called later.
+	1: 1.007_825_032_23,
+	6: 12,
+	8: 15.994_914_619_57,
+}
+
+func geomparse(filename string) []Atom { // Defines a function that takes a file name and returns a string in the struct "Atom"
+	input, _ := os.Open(filename) // Opens file and names it input and discards error with "_"
+	defer input.Close()           // Probably would forget to close it, so go ahead and tell it to close when finished
+
+	scannyboi := bufio.NewScanner(input) // Creates a scanner that has our input file in its crosshair
+
+	atoms := make([]Atom, 0) // Makes a slice called atoms in a struct called Atom that contains charge, x, y, z - coordinates for one atom
+
+	for i := 0; scannyboi.Scan(); i++ { // Begin scanning through the document and set up to discard first line of file
+		if i > 0 { // Skip the first line of the file
+			line := scannyboi.Text() // Setting a variable for the contents of a line in a file as a string
+
+			// fmt.Printf("%q\n", line) // Print what scanner sees
+
+			sliceyboi := strings.Fields(line) // Sets a new variable for the slice of string in "line"
+
+			// fmt.Printf("%q\n", sliceyboi)
+
+			vbucks := make([]float64, 0) // Makes a slice to hold our atomic data
+
+			charge := make([]int, 0) //makes a slice to hold the atomic number ; also could have done var charge int since it only holds one thing
+
+			for i, boi := range sliceyboi { // Makes a loop that parses through each line to convert strings into floats
+				// fmt.Printf("%d %q\n", i, boi)
+				if i == 0 {
+					atomnum, _ := strconv.Atoi(boi) // if var charge int was used, this would just be charge, _ = strconv.Atoi(boi)
+					charge = append(charge, atomnum)
+				} else {
+					v, _ := strconv.ParseFloat(boi, 64)
+					vbucks = append(vbucks, v)
+				}
+			}
+			atoms = append(atoms, Atom{ // Overwrites previous slice to contain the specific information below
+				charge: charge[0],
+				x:      vbucks[0],
+				y:      vbucks[1],
+				z:      vbucks[2],
+			})
+		}
+	}
+	return atoms // Gives us the stuff we did all this work above for... *sigh*
+}
+
+func bonddist(i, j Atom) float64 { // Bond Distance function that is given two atoms "atom1, atom2" from the Atom struct
+	x := i.x - j.x // Distance between x-coordinates of atom 1 and 2 from the Atom Struct
+	y := i.y - j.y
+	z := i.z - j.z
+	return math.Sqrt(x*x + y*y + z*z)
+}
+
+func unvec(i, j Atom) []float64 { // Takes two atoms from our Atom struct and makes then unit vectors and saves them as a slice
+	exij := -(i.x - j.x) / bonddist(i, j)
+	eyij := -(i.y - j.y) / bonddist(i, j)
+	ezij := -(i.z - j.z) / bonddist(i, j)
+	return []float64{exij, eyij, ezij}
+}
+
+func dotprod(v1, v2 []float64) (sum float64) { // takes two slices and computes their dot product that is returned as "sum" which is a number
+	for i := 0; i < len(v1); i++ {
+		sum += v1[i] * v2[i]
+	}
+	return
+}
+
+func crossprod(v1, v2 []float64) []float64 { // takes two slices (containing unit vectors probably) and returns a slice containing the cross product
+	return []float64{
+		v1[1]*v2[2] - v1[2]*v2[1],
+		v1[2]*v2[0] - v1[0]*v2[2],
+		v1[0]*v2[1] - v1[1]*v2[0],
+	}
+}
+
+func com(atoms []Atom) []float64 { // takes the fields of atom and iterates through the atoms gathering the pieces needed to return a slice that is the center of mass
+	var sumx float64
+	var sumy float64
+	var sumz float64
+	var tmass float64
+	for i, atom := range atoms {
+		sumx += mass[atoms[i].charge] * atoms[i].x
+		sumy += mass[atoms[i].charge] * atoms[i].y
+		sumz += mass[atoms[i].charge] * atoms[i].z
+		tmass += mass[atom.charge]
+		// fmt.Printf("%#+v\n%#+v\n%#+v\n", atoms, atoms[0].charge, atoms[1].x)
+	}
+	return []float64{
+		sumx / tmass,
+		sumy / tmass,
+		sumz / tmass,
+	}
+}
+
+func translate(atoms []Atom, com []float64) []Atom {
+	newatoms := make([]Atom, 0)
+	for _, atom := range atoms {
+		newatoms = append(newatoms, Atom{
+			charge: atom.charge,
+			x:      atom.x - com[0],
+			y:      atom.y - com[1],
+			z:      atom.z - com[2],
+		})
+
+	}
+	return newatoms
+
+}
+
+func inertia(atoms []Atom) *mat.Dense { // Takes atoms and constructs a moment of inertia matrix from those data points
+	var Ixx float64
+	var Iyy float64
+	var Izz float64
+	var Ixy float64
+	var Ixz float64
+	var Iyz float64
+	for _, atom := range atoms {
+		Ixx += mass[atom.charge] * ((atom.y * atom.y) + (atom.z * atom.z))
+		Iyy += mass[atom.charge] * ((atom.x * atom.x) + (atom.z * atom.z))
+		Izz += mass[atom.charge] * ((atom.x * atom.x) + (atom.y * atom.y))
+		Ixy -= mass[atom.charge] * (atom.x * atom.y)
+		Ixz -= mass[atom.charge] * (atom.x * atom.z)
+		Iyz -= mass[atom.charge] * (atom.y * atom.z)
+	}
+	matrix := mat.NewDense(3, 3, nil)
+	matrix.Set(0, 0, Ixx)
+	matrix.Set(0, 1, Ixy)
+	matrix.Set(0, 2, Ixz)
+	matrix.Set(1, 0, Ixy)
+	matrix.Set(1, 1, Iyy)
+	matrix.Set(1, 2, Iyz)
+	matrix.Set(2, 0, Ixz)
+	matrix.Set(2, 1, Iyz)
+	matrix.Set(2, 2, Izz)
+	return matrix
+}
+
+func diag(matrix *mat.Dense) (Ia, Ib, Ic float64) { // Takes the moment of intertia factorizes it to return Principle Moments of Inertia
+	var eig mat.Eigen
+	bag := make([]float64, 0)
+	eig.Factorize(matrix, mat.EigenLeft)
+	e := eig.Values(nil)
+	for _, value := range e {
+		// fmt.Println(real(value))
+		bag = append(bag, real(value))
+	}
+	sort.Float64s(bag)
+	// fmt.Println(e)
+	return bag[0], bag[1], bag[2]
+}
+
+func amua(Ia, Ib, Ic float64) (a, b, c float64) {
+	a = Ia * (0.529177249 * 0.529177249)
+	b = Ib * (0.529177249 * 0.529177249)
+	c = Ic * (0.529177249 * 0.529177249)
+	return
+}
+
+func gcm(Ia, Ib, Ic float64) (d, e, f float64) {
+	d = Ia * ((1.6605402e-24) * (0.529177249e-8 * 0.529177249e-8))
+	e = Ib * ((1.6605402e-24) * (0.529177249e-8 * 0.529177249e-8))
+	f = Ic * ((1.6605402e-24) * (0.529177249e-8 * 0.529177249e-8))
+	return
+}
+
+func rotcon(d, e, f float64) (t, u, v float64) {
+	t = (6.626e-34 / (8 * (math.Pi * math.Pi) * 2.998e10 * d)) * (1000) * (100 * 100)
+	u = (6.626e-34 / (8 * (math.Pi * math.Pi) * 2.998e10 * e)) * (1000) * (100 * 100)
+	v = (6.626e-34 / (8 * (math.Pi * math.Pi) * 2.998e10 * f)) * (1000) * (100 * 100)
+	return
+}
+
+func rotconmhz(d, e, f float64) (q, r, s float64) {
+	q = (6.626e-34 / (8 * (math.Pi * math.Pi) * d)) * (1000 * 1000) * 10e-6
+	r = (6.626e-34 / (8 * (math.Pi * math.Pi) * e)) * (1000 * 1000) * 10e-6
+	s = (6.626e-34 / (8 * (math.Pi * math.Pi) * f)) * (1000 * 1000) * 10e-6
+	return
+}
+
+func eq(req float64, nums ...float64) bool { // Sets up a boolean equation that allows for things to be equal to one another given a certain threshold.
+	for _, num := range nums {
+		if math.Abs(req-num) > 1e-4 {
+			return false
+		}
+	}
+	return true
+}
+
+func rotortype(Ia, Ib, Ic float64) string {
+	var typerotor string
+	switch {
+	case eq(Ia, Ib, Ic):
+		typerotor = "Spherical Top"
+	case eq(Ia, 0) && eq(Ib, Ic):
+		typerotor = "Linear Top"
+	case eq(Ia, Ib) && Ib < Ic:
+		typerotor = "Oblate Top"
+	case Ia < Ib && eq(Ib, Ic):
+		typerotor = "Prolate Top"
+	case !eq(Ia, Ib) && !eq(Ia, Ic) && !eq(Ib, Ic):
+		typerotor = "Asymmetric Top"
+	}
+	return typerotor
+}
+
+func bondangle(i, j, k Atom) float64 { // takes three fields from Atom creates unit vectors for them and calculates their dot product returning the bond angle in radians
+	eji := unvec(j, i)
+	ejk := unvec(j, k)
+	dot := dotprod(eji, ejk)
+	return math.Acos(dot)
+}
+
+func oopangle(i, j, k, l Atom) float64 { // takes four fields from Atom, creates unit vectors for them, calculate cross and dot products and returns the out of plane angle in radian.
+	ekj := unvec(k, j)
+	ekl := unvec(k, l)
+	eki := unvec(k, i)
+	x := crossprod(ekj, ekl)
+	return math.Asin(dotprod(eki, x) * 1 / math.Sin(bondangle(j, k, l)))
+}
+
+func tordiangle(i, j, k, l Atom) float64 { // takes four fields from Atom, creates unite vectors and calculates cross and dot products and bond angles to return torsional angles
+	eij := unvec(i, j)
+	ejk := unvec(j, k)
+	ekl := unvec(k, l)
+	xj := crossprod(eij, ejk)
+	xk := crossprod(ejk, ekl)
+	aijk := bondangle(i, j, k)
+	ajkl := bondangle(j, k, l)
+	tordi := dotprod(xj, xk) / (math.Sin(aijk) * math.Sin(ajkl))
+
+	if tordi < -1.0 {
+		tordi = math.Acos(-1.0)
+	} else if tordi > 1.0 {
+		tordi = math.Acos(1.0)
+	} else {
+		tordi = math.Acos(tordi)
+	}
+	return tordi
+}
+
+func main() { //The start of a go program
+	geomparse("geom.dat")
+	atoms := geomparse("geom.dat")
+	com := com(atoms)
+	newatoms := translate(atoms, com)
+	inertia := inertia(newatoms)
+	Ia, Ib, Ic := diag(inertia)
+	rotortype := rotortype(Ia, Ib, Ic)
+	a, b, c := amua(Ia, Ib, Ic)
+	d, e, f := gcm(Ia, Ib, Ic)
+	t, u, v := rotcon(d, e, f)
+	q, r, s := rotconmhz(d, e, f)
+	// fmt.Println(newatoms)
+	// fmt.Println(inertia)
+	// fmt.Println(diag(inertia))
+	// for i := 1; i < len(atoms); i++ {
+	// 	for j := 0; j < i; j++ {
+	// 		fmt.Println(unvec(atoms[i], atoms[j]))
+	// 	}
+	// }
+
+	fmt.Println("Interatomic Bond Distance")
+	for i := 1; i < len(atoms); i++ { // set first atom in "atoms" to zero and increment by 1 until it reaches the length of "atoms"
+		for j := 0; j < i; j++ { // set second atom in "atoms" to 1 and increments by until it reaches the value for i in order to not double count and avoid divide by zero errors
+			fmt.Printf("%v- %v %8.5f\n", i, j, bonddist(atoms[i], atoms[j]))
+		}
+	}
+
+	fmt.Printf("\n%v\n", "Bond Angles")
+	for i := 1; i < len(atoms); i++ {
+		for j := 0; j < i; j++ {
+			for k := 0; k < j; k++ {
+				if bonddist(atoms[i], atoms[j]) < 4.0 {
+					if bonddist(atoms[j], atoms[k]) < 4.0 {
+						fmt.Printf("%v- %v- %v %10.6f\n", i, j, k, bondangle(atoms[i], atoms[j], atoms[k])*(180/math.Pi)) // prints the outcome of the bond distance for any of the combinations of i and j from our array that we're routing around in
+					}
+				}
+			}
+		}
+	}
+
+	fmt.Printf("\n%v\n", "Out-Of-Plane Bends")
+	for i := 0; i < len(atoms); i++ {
+		for k := 0; k < len(atoms); k++ {
+			for j := 0; j < len(atoms); j++ {
+				for l := 0; l < j; l++ {
+					if i != k && i != j && i != l && j != k && j != l && k != l &&
+						bonddist(atoms[i], atoms[k]) < 4.0 &&
+						bonddist(atoms[k], atoms[j]) < 4.0 &&
+						bonddist(atoms[k], atoms[l]) < 4.0 {
+						fmt.Printf("%v- %v- %v- %v %10.6f\n", i, j, k, l, oopangle(atoms[i], atoms[j], atoms[k], atoms[l])*(180/math.Pi))
+					}
+				}
+			}
+		}
+	}
+
+	fmt.Printf("\n%v\n", "Torsional/Dihedral Angles")
+	for i := 0; i < len(atoms); i++ {
+		for j := 0; j < i; j++ {
+			for k := 0; k < j; k++ {
+				for l := 0; l < k; l++ {
+					if bonddist(atoms[i], atoms[j]) < 4.0 &&
+						bonddist(atoms[j], atoms[k]) < 4.0 &&
+						bonddist(atoms[k], atoms[l]) < 4.0 {
+						fmt.Printf("%v- %v- %v- %v %10.6f\n", i, j, k, l, tordiangle(atoms[i], atoms[j], atoms[k], atoms[l])*(180/math.Pi))
+					}
+				}
+			}
+		}
+	}
+
+	fmt.Printf("\n%v %10.6f %10.6f %10.6f\n", "Molecular center of mass:", com[0], com[1], com[2])
+	fmt.Printf("\n%v\n", "Principle Moments of Inertia (amu Bohr^2)")
+	fmt.Printf("%10.6f %10.6f %10.6f\n", Ia, Ib, Ic)
+	fmt.Printf("\n%v\n", "Principle Moments of Inertia (amu Angstrom^2)")
+	fmt.Printf("%10.6f %10.6f %10.6f\n", a, b, c)
+	fmt.Printf("\n%v\n", "Principle Moments of Inertia (g cm^2)")
+	fmt.Printf("%10.6e %10.6e %10.6e\n\n", d, e, f)
+	fmt.Println("This molecule's rotor type is", rotortype)
+	fmt.Printf("\n%v\n", "Rotational Constants (cm^-1)")
+	fmt.Printf("%10.4f %10.4f %10.4f\n", t, u, v)
+	fmt.Printf("\n%v\n", "Rotational Constants (MHz)")
+	fmt.Printf("%10.3f %10.3f %10.3f\n\n", q, r, s)
+}

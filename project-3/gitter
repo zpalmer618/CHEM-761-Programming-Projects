@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for i in {enuc,s,v,t,eri,geom,mux,muy,muz}; do
+curl -O \
+"https://raw.githubusercontent.com/CrawfordGroup/ProgrammingProjects/master/Project%2303/input/h2o/STO-3G/"$i.dat
+done

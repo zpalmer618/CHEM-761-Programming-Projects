@@ -1,0 +1,173 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+
+	"math"
+
+	"gonum.org/v1/gonum/mat"
+)
+
+func enuc(filename string) float64 {
+	stuff, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	stuff2 := strings.TrimSpace(string(stuff))
+	stuff3, _ := strconv.ParseFloat(stuff2, 64)
+	// fmt.Println(stuff3)
+	return stuff3
+}
+
+func maketrix(filename string) *mat.SymDense {
+	input, _ := os.Open(filename)
+	defer input.Close()
+	scan := bufio.NewScanner(input)
+	matrix := mat.NewSymDense(1, nil)
+	for scan.Scan() {
+		line := strings.Fields(scan.Text())
+		i, _ := strconv.Atoi(line[0])
+		j, _ := strconv.Atoi(line[1])
+		val, _ := strconv.ParseFloat(line[2], 64)
+		// fmt.Printf("%T %T %f\n", i, j, val)
+		if i < j {
+			i, j = j, i
+		}
+		n, _ := matrix.Dims()
+		// fmt.Println(i, j, n)
+		if n < i {
+			matrix = (matrix.GrowSym(i - n)).(*mat.SymDense)
+		}
+		matrix.SetSym(j-1, i-1, val)
+	}
+	return matrix
+}
+
+func compind(m, n, l, s int) int {
+	if m < n {
+		m, n = n, m
+	}
+	mn := m*(m+1)/2 + n
+	if l < s {
+		l, s = s, l
+	}
+	ls := l*(l+1)/2 + s
+	if mn < ls {
+		mn, ls = ls, mn
+	}
+	mnls := mn*(mn+1)/2 + ls
+	return mnls
+}
+
+func twoelec(filename string) []float64 {
+	input, _ := os.Open(filename)
+	defer input.Close()
+	scan := bufio.NewScanner(input)
+	slice := make([]float64, 0)
+	for scan.Scan() {
+		line := strings.Fields(scan.Text())
+		m, _ := strconv.Atoi(line[0])
+		n, _ := strconv.Atoi(line[1])
+		l, _ := strconv.Atoi(line[2])
+		s, _ := strconv.Atoi(line[3])
+		val, _ := strconv.ParseFloat(line[4], 64)
+		// fmt.Printf("%T %T %T %T %f\n", m, n, l, s, val)
+		mnls := compind(m-1, n-1, l-1, s-1)
+		for mnls >= len(slice) {
+			slice = append(slice, 0)
+		}
+		slice[mnls] = val
+	}
+	// fmt.Println(len(slice))
+	return slice
+}
+
+func smat(matrix *mat.SymDense) *mat.Dense {
+	// fmt.Println("SMAT")
+	var eig mat.EigenSym
+	var evec mat.Dense
+	eig.Factorize(matrix, true)
+	eval := eig.Values(nil)
+	lambda := mat.NewDense(len(eval), len(eval), nil)
+	for i := range eval {
+		lambda.Set(i, i, 1/math.Sqrt(eval[i]))
+	}
+	eig.VectorsTo(&evec)
+	var s12 mat.Dense
+	s12.Mul(lambda, evec.T())
+	s12.Mul(&evec, &s12)
+	// printmat(&s12)
+	return &s12
+}
+
+func denmat(matrix *mat.Dense) *mat.Dense {
+	t := maketrix("h2o_sto3g/t.dat")
+	v := maketrix("h2o_sto3g/v.dat")
+	h := madd(t, v)
+	var fmat mat.Dense
+	fmat.Mul(h, matrix)
+	fmat.Mul(matrix.T(), &fmat)
+	var eig mat.EigenSym
+	var evec mat.Dense
+	eig.Factorize(&fmat, true)
+	eval := eig.Values(nil)
+	energy := mat.NewDense(len(eval), len(eval), nil)
+	for i := range eval {
+		energy.Set(i, i, eval[i])
+	}
+	eig.VectorsTo(&evec)
+	var c0 mat.Dense
+	c0.Mul(matrix, &evec)
+	printmat(&c0)
+	return nil
+}
+
+func printmat(matrix mat.Matrix) {
+	r, c := matrix.Dims()
+	for i := 0; i < r; i++ {
+		fmt.Printf("%5d", i+1)
+		for j := 0; j < c; j++ {
+			fmt.Printf("%12.8f", matrix.At(i, j))
+		}
+		fmt.Print("\n")
+	}
+}
+
+func madd(a, b *mat.SymDense) *mat.SymDense {
+	var sum mat.SymDense
+	sum.AddSym(a, b)
+	return &sum
+}
+
+func main() {
+	nucrep := enuc("h2o_sto3g/enuc.dat")
+	s := maketrix("h2o_sto3g/s.dat")
+	t := maketrix("h2o_sto3g/t.dat")
+	v := maketrix("h2o_sto3g/v.dat")
+	h := madd(t, v)
+	s12 := smat(s)
+	fmt.Println("Nuclear Repulsion Energy = ", nucrep, "\n")
+	fmt.Println("AO Overlap Integrals:", "\n")
+	printmat(s)
+	fmt.Println("\n")
+	fmt.Println("Kinetic Energy Integrals:", "\n")
+	printmat(t)
+	fmt.Println("\n")
+	fmt.Println("Nuclear Attraction Integrals:", "\n")
+	printmat(v)
+	fmt.Println("\n")
+	fmt.Println("Core Hamiltonian:", "\n")
+	printmat(h)
+	twoelec("h2o_sto3g/eri.dat")
+	fmt.Println("\n")
+	fmt.Println("Orthogonalization Matrix:", "\n")
+	printmat(s12)
+	fmt.Println("\n")
+	denmat(s12)
+}
