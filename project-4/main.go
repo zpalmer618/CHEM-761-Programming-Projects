@@ -809,7 +809,7 @@ func main() {
 	T2 := T2amp(sof, fae, fmi, fme, singlestia, doublestijab, spin, Wmnij, Wabef, Wmbej, Dijab, regtau, nsocc, nmo)
 	iter, de, rmsd = 1, 1.0, 1.0
 	var firstEcc float64
-	for de > 1e-14 && rmsd > 1e-12 {
+	for de > 1e-12 && rmsd > 1e-12 {
 		tildetau := ttau(spin, T2, nmo, nsocc, T1)
 		regtau := tau(spin, T2, nmo, nsocc, T1)
 		fae := faeint(sof, T1, spin, tildetau, nsocc, nmo)
