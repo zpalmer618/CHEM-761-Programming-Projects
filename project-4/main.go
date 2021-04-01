@@ -1,3 +1,9 @@
+/*
+   This is a script illustrating the intricacies of a quantum chemical suite's ability to calcualte the SCF
+   converged energy specifically for H2O using STO-3G as a basis set and CCSD as the method. Previous lines
+   of code in this script were pulled from a very similar code that computed the same energy at the same
+   basis set level, but with HF as the method.
+*/
 package main
 
 import (
@@ -13,7 +19,7 @@ import (
 
 	"gonum.org/v1/gonum/mat"
 )
-
+// This is for reading in the nuclear repulsion energy from a separate file and converting it to a float
 func enuc(filename string) float64 {
 	stuff, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -25,6 +31,10 @@ func enuc(filename string) float64 {
 	return stuff3
 }
 
+/*
+   This takes an input file and splits the contents into a format that can be easily stored
+   as a matrix using gonum/mat package.
+*/
 func maketrix(filename string) *mat.SymDense {
 	input, _ := os.Open(filename)
 	defer input.Close()
@@ -49,6 +59,10 @@ func maketrix(filename string) *mat.SymDense {
 	return matrix
 }
 
+/*
+   This is a simple script that takes integers and stores them as a compound index that is used
+   for pulling specific values from the two electron integrals
+*/
 func compind(m, n, l, s int) int {
 	if m < n {
 		m, n = n, m
@@ -65,6 +79,9 @@ func compind(m, n, l, s int) int {
 	return mnls
 }
 
+/* This takes the two electron input file and, using the compind function, returns it as an indexable
+   slice of floats.
+*/
 func twoelec(filename string) []float64 {
 	input, _ := os.Open(filename)
 	defer input.Close()
@@ -88,6 +105,9 @@ func twoelec(filename string) []float64 {
 	return slice
 }
 
+/*
+   This is a script that is used to make transform the AO-basis two electron integrals into the MO-basis
+*/
 func noddy(c *mat.Dense, t []float64) []float64 {
 	row, _ := c.Dims()
 	slice := make([]float64, 0)
