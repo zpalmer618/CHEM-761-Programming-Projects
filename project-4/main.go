@@ -780,21 +780,23 @@ func main() {
 		iter++
 	}
 	fmt.Println("\n")
-	fmt.Println("HF/STO-3G Energy = ", etot, "\n")
+	EHF := etot
+	fmt.Println("HF/STO-3G Energy = ", EHF, "\n")
 	mof := mofockmat(newc, f)
 	// nod := noddy(newc, eri)
 	// fmt.Println(mp2energy(mo, nod, nocc, nao))
 	newi := smart(newc, eri)
 	mp2 := mp2energy(mof, newi, nocc)
+	Emp2 := EHF + mp2
 	fmt.Println("MP2 Energy Correction = ", mp2, "\n")
-	fmt.Println("MP2/STO-3G Energy = ", etot+mp2, "\n")
+	fmt.Println("MP2/STO-3G Energy = ", Emp2, "\n")
 	spin := spattospin(newi, nmo)
 	moh := mohmat(newc, h)
 	sof := spinfock(moh, spin, nmo, nsocc)
 	singlestia := tia(nsocc, nmo)
 	doublestijab := tijab(spin, sof, nsocc, nmo)
 	CCmp2 := ccmp2(sof, spin, nmo, nsocc, doublestijab)
-	fmt.Println("MP2 Energy from CC Initial Amplitudes = ", CCmp2, "\n")
+	fmt.Println("MP2 Energy Correction from CC Initial Amplitudes = ", CCmp2, "\n")
 	tildetau := ttau(spin, doublestijab, nmo, nsocc, singlestia)
 	regtau := tau(spin, doublestijab, nmo, nsocc, singlestia)
 	fae := faeint(sof, singlestia, spin, tildetau, nsocc, nmo)
@@ -807,8 +809,11 @@ func main() {
 	Dijab := dijab(sof, nmo, nsocc)
 	T1 := T1amp(sof, fae, fmi, fme, Dia, singlestia, doublestijab, spin, nsocc, nmo)
 	T2 := T2amp(sof, fae, fmi, fme, singlestia, doublestijab, spin, Wmnij, Wabef, Wmbej, Dijab, regtau, nsocc, nmo)
+	fmt.Println("Iter:", "  E(elec):", "           CC-E(tot):", "            Delta(E):", "           T1 RMS(D):")
 	iter, de, rmsd = 1, 1.0, 1.0
+	// rmsd2 := 1.0
 	var firstEcc float64
+	var CCEtot float64
 	for de > 1e-12 && rmsd > 1e-12 {
 		tildetau := ttau(spin, T2, nmo, nsocc, T1)
 		regtau := tau(spin, T2, nmo, nsocc, T1)
@@ -825,11 +830,19 @@ func main() {
 		newEcc := ccenergy(sof, T1, spin, T2, nsocc, nmo)
 		de = math.Abs(newEcc - firstEcc)
 		firstEcc = newEcc
+		var diff mat.Dense
+		diff.Sub(T1, newt1)
+		rmsd = mat.Norm(&diff, 2)
 		T1 = newt1
 		T2 = newt2
-		fmt.Printf("%02d %20.12f %20.12f\n", iter, newEcc, de)
+		CCEtot = newEcc + EHF
+		fmt.Printf("%02d %20.12f %20.12f %20.12f %20.12f\n", iter, newEcc, CCEtot, de, rmsd)
 		iter++
 	}
+	fmt.Println("\n")
+	fmt.Println("HF/STO-3G Energy = ", EHF, "\n")
+	fmt.Println("CCSD Energy Correction = ", firstEcc, "\n")
+	fmt.Println("CCSD/STO-3G Energy = ", CCEtot, "\n")
 }
 
 // (progn (setq compile-command "time go run .") (recompile))
