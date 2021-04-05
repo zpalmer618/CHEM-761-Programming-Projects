@@ -680,24 +680,23 @@ func t3con(d3 [][][][][][]float64, spin, tijab [][][][]float64, nmo, nsocc int) 
 								val[i][j][k][a][b][c] -= tijab[j][k][b][e] * spin[e][i][a][c]
 								val[i][j][k][a][b][c] -= tijab[j][k][c][e] * spin[e][i][b][a]
 								val[i][j][k][a][b][c] -= tijab[i][k][a][e] * spin[e][j][b][c]
-								val[i][j][k][a][b][c] -= tijab[i][k][b][e] * spin[e][j][a][c]
-								val[i][j][k][a][b][c] -= tijab[i][k][c][e] * spin[e][j][b][a]
+								val[i][j][k][a][b][c] += tijab[i][k][b][e] * spin[e][j][a][c]
+								val[i][j][k][a][b][c] += tijab[i][k][c][e] * spin[e][j][b][a]
 								val[i][j][k][a][b][c] -= tijab[j][i][a][e] * spin[e][k][b][c]
-								val[i][j][k][a][b][c] -= tijab[j][i][b][e] * spin[e][k][a][c]
-								val[i][j][k][a][b][c] -= tijab[j][i][c][e] * spin[e][k][b][a]
+								val[i][j][k][a][b][c] += tijab[j][i][b][e] * spin[e][k][a][c]
+								val[i][j][k][a][b][c] += tijab[j][i][c][e] * spin[e][k][b][a]
 							}
 							for m := 0; m < nsocc; m++ {
 								val[i][j][k][a][b][c] -= tijab[i][m][b][c] * spin[m][a][j][k]
-								val[i][j][k][a][b][c] -= tijab[i][m][a][c] * spin[m][b][j][k]
-								val[i][j][k][a][b][c] -= tijab[i][m][b][a] * spin[m][c][j][k]
-								val[i][j][k][a][b][c] -= tijab[j][m][b][c] * spin[m][a][i][k]
+								val[i][j][k][a][b][c] += tijab[i][m][a][c] * spin[m][b][j][k]
+								val[i][j][k][a][b][c] += tijab[i][m][b][a] * spin[m][c][j][k]
+								val[i][j][k][a][b][c] += tijab[j][m][b][c] * spin[m][a][i][k]
 								val[i][j][k][a][b][c] -= tijab[j][m][a][c] * spin[m][b][i][k]
 								val[i][j][k][a][b][c] -= tijab[j][m][b][a] * spin[m][c][i][k]
-								val[i][j][k][a][b][c] -= tijab[k][m][b][c] * spin[m][a][j][i]
+								val[i][j][k][a][b][c] += tijab[k][m][b][c] * spin[m][a][j][i]
 								val[i][j][k][a][b][c] -= tijab[k][m][a][c] * spin[m][b][j][i]
 								val[i][j][k][a][b][c] -= tijab[k][m][b][a] * spin[m][c][j][i]
 							}
-							val[i][j][k][a][b][c] /= d3[i][j][k][a][b][c]
 						}
 					}
 				}
@@ -723,7 +722,6 @@ func t3dis(d3 [][][][][][]float64, spin [][][][]float64, tia *mat.Dense, nmo, ns
 							val[i][j][k][a][b][c] += tia.At(i, a)*spin[j][k][b][c] - tia.At(i, b)*spin[j][k][a][c] - tia.At(i, c)*spin[j][k][b][a]
 							val[i][j][k][a][b][c] -= tia.At(j, a)*spin[i][k][b][c] - tia.At(j, b)*spin[i][k][a][c] - tia.At(j, c)*spin[i][k][b][a]
 							val[i][j][k][a][b][c] -= tia.At(k, a)*spin[j][i][b][c] - tia.At(k, b)*spin[j][i][a][c] - tia.At(k, c)*spin[j][i][b][a]
-							val[i][j][k][a][b][c] /= d3[i][j][k][a][b][c]
 						}
 					}
 				}
@@ -741,15 +739,14 @@ func ept(d3, t3discon, t3conn [][][][][][]float64, nmo, nsocc int) float64 {
 				for a := nsocc; a < nmo; a++ {
 					for b := nsocc; b < nmo; b++ {
 						for c := nsocc; c < nmo; c++ {
-							val += t3conn[i][j][k][a][b][c] * d3[i][j][k][a][b][c] * (t3conn[i][j][k][a][b][c] + t3discon[i][j][k][a][b][c])
-							val /= 36.0
+							val += t3conn[i][j][k][a][b][c] / d3[i][j][k][a][b][c] * (t3conn[i][j][k][a][b][c] + t3discon[i][j][k][a][b][c])
 						}
 					}
 				}
 			}
 		}
 	}
-	return val
+	return val / 36.0
 }
 
 func smat(matrix *mat.SymDense) *mat.Dense {
@@ -984,6 +981,7 @@ func main() {
 	t3disc := t3dis(d3, spin, newt1, nmo, nsocc)
 	eparant := ept(d3, t3disc, t3conn, nmo, nsocc)
 	fmt.Println("(T) Energy Correction = ", eparant, "\n")
+	fmt.Println("CCSD(T)/STO-3G Energy = ", EHF+firstEcc+eparant, "\n")
 }
 
-// (Progn (setq compile-command "time go run .") (recompile))
+// (progn (setq compile-command "time go run .") (recompile))
