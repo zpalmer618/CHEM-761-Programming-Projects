@@ -19,6 +19,7 @@ import (
 
 	"gonum.org/v1/gonum/mat"
 )
+
 // This is for reading in the nuclear repulsion energy from a separate file and converting it to a float
 func enuc(filename string) float64 {
 	stuff, err := ioutil.ReadFile(filename)
@@ -638,6 +639,119 @@ func ccenergy(sof, tia *mat.Dense, spin, tijab [][][][]float64, nsocc, nmo int) 
 	return val
 }
 
+func dijkabc(sof *mat.Dense, nmo, nsocc int) [][][][][][]float64 {
+	val := make([][][][][][]float64, nmo)
+	for i := 0; i < nsocc; i++ {
+		val[i] = make([][][][][]float64, nmo)
+		for j := 0; j < nsocc; j++ {
+			val[i][j] = make([][][][]float64, nmo)
+			for k := 0; k < nsocc; k++ {
+				val[i][j][k] = make([][][]float64, nmo)
+				for a := nsocc; a < nmo; a++ {
+					val[i][j][k][a] = make([][]float64, nmo)
+					for b := nsocc; b < nmo; b++ {
+						val[i][j][k][a][b] = make([]float64, nmo)
+						for c := nsocc; c < nmo; c++ {
+							val[i][j][k][a][b][c] = sof.At(i, i) + sof.At(j, j) + sof.At(k, k) - sof.At(a, a) - sof.At(b, b) - sof.At(c, c)
+						}
+					}
+				}
+			}
+		}
+	}
+	return val
+}
+
+func t3con(d3 [][][][][][]float64, spin, tijab [][][][]float64, nmo, nsocc int) [][][][][][]float64 {
+	val := make([][][][][][]float64, nmo)
+	for i := 0; i < nsocc; i++ {
+		val[i] = make([][][][][]float64, nmo)
+		for j := 0; j < nsocc; j++ {
+			val[i][j] = make([][][][]float64, nmo)
+			for k := 0; k < nsocc; k++ {
+				val[i][j][k] = make([][][]float64, nmo)
+				for a := nsocc; a < nmo; a++ {
+					val[i][j][k][a] = make([][]float64, nmo)
+					for b := nsocc; b < nmo; b++ {
+						val[i][j][k][a][b] = make([]float64, nmo)
+						for c := nsocc; c < nmo; c++ {
+							for e := nsocc; e < nmo; e++ {
+								val[i][j][k][a][b][c] += tijab[j][k][a][e] * spin[e][i][b][c]
+								val[i][j][k][a][b][c] -= tijab[j][k][b][e] * spin[e][i][a][c]
+								val[i][j][k][a][b][c] -= tijab[j][k][c][e] * spin[e][i][b][a]
+								val[i][j][k][a][b][c] -= tijab[i][k][a][e] * spin[e][j][b][c]
+								val[i][j][k][a][b][c] -= tijab[i][k][b][e] * spin[e][j][a][c]
+								val[i][j][k][a][b][c] -= tijab[i][k][c][e] * spin[e][j][b][a]
+								val[i][j][k][a][b][c] -= tijab[j][i][a][e] * spin[e][k][b][c]
+								val[i][j][k][a][b][c] -= tijab[j][i][b][e] * spin[e][k][a][c]
+								val[i][j][k][a][b][c] -= tijab[j][i][c][e] * spin[e][k][b][a]
+							}
+							for m := 0; m < nsocc; m++ {
+								val[i][j][k][a][b][c] -= tijab[i][m][b][c] * spin[m][a][j][k]
+								val[i][j][k][a][b][c] -= tijab[i][m][a][c] * spin[m][b][j][k]
+								val[i][j][k][a][b][c] -= tijab[i][m][b][a] * spin[m][c][j][k]
+								val[i][j][k][a][b][c] -= tijab[j][m][b][c] * spin[m][a][i][k]
+								val[i][j][k][a][b][c] -= tijab[j][m][a][c] * spin[m][b][i][k]
+								val[i][j][k][a][b][c] -= tijab[j][m][b][a] * spin[m][c][i][k]
+								val[i][j][k][a][b][c] -= tijab[k][m][b][c] * spin[m][a][j][i]
+								val[i][j][k][a][b][c] -= tijab[k][m][a][c] * spin[m][b][j][i]
+								val[i][j][k][a][b][c] -= tijab[k][m][b][a] * spin[m][c][j][i]
+							}
+							val[i][j][k][a][b][c] /= d3[i][j][k][a][b][c]
+						}
+					}
+				}
+			}
+		}
+	}
+	return val
+}
+
+func t3dis(d3 [][][][][][]float64, spin [][][][]float64, tia *mat.Dense, nmo, nsocc int) [][][][][][]float64 {
+	val := make([][][][][][]float64, nmo)
+	for i := 0; i < nsocc; i++ {
+		val[i] = make([][][][][]float64, nmo)
+		for j := 0; j < nsocc; j++ {
+			val[i][j] = make([][][][]float64, nmo)
+			for k := 0; k < nsocc; k++ {
+				val[i][j][k] = make([][][]float64, nmo)
+				for a := nsocc; a < nmo; a++ {
+					val[i][j][k][a] = make([][]float64, nmo)
+					for b := nsocc; b < nmo; b++ {
+						val[i][j][k][a][b] = make([]float64, nmo)
+						for c := nsocc; c < nmo; c++ {
+							val[i][j][k][a][b][c] += tia.At(i, a)*spin[j][k][b][c] - tia.At(i, b)*spin[j][k][a][c] - tia.At(i, c)*spin[j][k][b][a]
+							val[i][j][k][a][b][c] -= tia.At(j, a)*spin[i][k][b][c] - tia.At(j, b)*spin[i][k][a][c] - tia.At(j, c)*spin[i][k][b][a]
+							val[i][j][k][a][b][c] -= tia.At(k, a)*spin[j][i][b][c] - tia.At(k, b)*spin[j][i][a][c] - tia.At(k, c)*spin[j][i][b][a]
+							val[i][j][k][a][b][c] /= d3[i][j][k][a][b][c]
+						}
+					}
+				}
+			}
+		}
+	}
+	return val
+}
+
+func ept(d3, t3discon, t3conn [][][][][][]float64, nmo, nsocc int) float64 {
+	var val float64
+	for i := 0; i < nsocc; i++ {
+		for j := 0; j < nsocc; j++ {
+			for k := 0; k < nsocc; k++ {
+				for a := nsocc; a < nmo; a++ {
+					for b := nsocc; b < nmo; b++ {
+						for c := nsocc; c < nmo; c++ {
+							val += t3conn[i][j][k][a][b][c] * d3[i][j][k][a][b][c] * (t3conn[i][j][k][a][b][c] + t3discon[i][j][k][a][b][c])
+							val /= 36.0
+						}
+					}
+				}
+			}
+		}
+	}
+	return val
+}
+
 func smat(matrix *mat.SymDense) *mat.Dense {
 	// fmt.Println("SMAT")
 	var eig mat.EigenSym
@@ -834,6 +948,8 @@ func main() {
 	// rmsd2 := 1.0
 	var firstEcc float64
 	var CCEtot float64
+	var newt1 *mat.Dense
+	var newt2 [][][][]float64
 	for de > 1e-12 && rmsd > 1e-12 {
 		tildetau := ttau(spin, T2, nmo, nsocc, T1)
 		regtau := tau(spin, T2, nmo, nsocc, T1)
@@ -845,8 +961,8 @@ func main() {
 		Wmbej := wmbej(spin, T2, nsocc, nmo, T1)
 		Dia := dia(sof, nmo, nsocc)
 		Dijab := dijab(sof, nmo, nsocc)
-		newt1 := T1amp(sof, fae, fmi, fme, Dia, T1, T2, spin, nsocc, nmo)
-		newt2 := T2amp(sof, fae, fmi, fme, T1, T2, spin, Wmnij, Wabef, Wmbej, Dijab, regtau, nsocc, nmo)
+		newt1 = T1amp(sof, fae, fmi, fme, Dia, T1, T2, spin, nsocc, nmo)
+		newt2 = T2amp(sof, fae, fmi, fme, T1, T2, spin, Wmnij, Wabef, Wmbej, Dijab, regtau, nsocc, nmo)
 		newEcc := ccenergy(sof, T1, spin, T2, nsocc, nmo)
 		de = math.Abs(newEcc - firstEcc)
 		firstEcc = newEcc
@@ -863,6 +979,11 @@ func main() {
 	fmt.Println("HF/STO-3G Energy = ", EHF, "\n")
 	fmt.Println("CCSD Energy Correction = ", firstEcc, "\n")
 	fmt.Println("CCSD/STO-3G Energy = ", CCEtot, "\n")
+	d3 := dijkabc(sof, nmo, nsocc)
+	t3conn := t3con(d3, spin, newt2, nmo, nsocc)
+	t3disc := t3dis(d3, spin, newt1, nmo, nsocc)
+	eparant := ept(d3, t3disc, t3conn, nmo, nsocc)
+	fmt.Println("(T) Energy Correction = ", eparant, "\n")
 }
 
-// (progn (setq compile-command "time go run .") (recompile))
+// (Progn (setq compile-command "time go run .") (recompile))
