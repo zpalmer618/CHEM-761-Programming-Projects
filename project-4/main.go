@@ -107,7 +107,7 @@ func twoelec(filename string) []float64 {
 }
 
 /*
-   This is a script that is used to make transform the AO-basis two electron integrals into the MO-basis
+   This is a function that is used to make transform the AO-basis two electron integrals into the MO-basis
 */
 func noddy(c *mat.Dense, t []float64) []float64 {
 	row, _ := c.Dims()
@@ -142,6 +142,7 @@ func noddy(c *mat.Dense, t []float64) []float64 {
 	return slice
 }
 
+// A function that computes energy using MP2 as its method
 func mp2energy(mo, noddy []float64, nocc int) float64 {
 	var sum float64
 	for i := 0; i < nocc; i++ {
@@ -159,6 +160,7 @@ func mp2energy(mo, noddy []float64, nocc int) float64 {
 	return sum
 }
 
+// A function that computes two electron integrals and is easier to store for the code.
 func smart(c *mat.Dense, t []float64) (smarti []float64) {
 	row, _ := c.Dims()
 	map1 := make(map[[4]int]float64)
@@ -223,6 +225,7 @@ func smart(c *mat.Dense, t []float64) (smarti []float64) {
 	return
 }
 
+// This turns the spatial-basis two electron integrals into the spin-basis two electron integrals.
 func spattospin(smarti []float64, nmo int) (spin [][][][]float64) {
 	spin = make([][][][]float64, nmo)
 	var v1 float64
@@ -252,6 +255,7 @@ func spattospin(smarti []float64, nmo int) (spin [][][][]float64) {
 	return
 }
 
+// Transforms the Fock matrix into a spin basis version.
 func spinfock(h *mat.SymDense, spin [][][][]float64, nmo int, nsocc int) (sofock *mat.Dense) {
 	r, _ := h.Dims()
 	sofock = mat.NewDense(2*r, 2*r, nil)
@@ -271,6 +275,7 @@ func spinfock(h *mat.SymDense, spin [][][][]float64, nmo int, nsocc int) (sofock
 	return
 }
 
+// Computes the enegrgy using coupled cluster amplitudes
 func ccmp2(spinf *mat.Dense, spin [][][][]float64, nmo int, nsocc int, tijab [][][][]float64) float64 {
 	// var tijab float64
 	var sum float64
@@ -293,6 +298,7 @@ func ccmp2(spinf *mat.Dense, spin [][][][]float64, nmo int, nsocc int, tijab [][
 	return emp2
 }
 
+// Computes the single excitation contributions for CCSD
 func tia(nsocc, nmo int) *mat.Dense {
 	matrix := mat.NewDense(nmo, nmo, nil)
 	for i := 0; i < nsocc; i++ {
@@ -303,6 +309,7 @@ func tia(nsocc, nmo int) *mat.Dense {
 	return matrix
 }
 
+// Computes the double excitation contributions for CCSD
 func tijab(spin [][][][]float64, spinf *mat.Dense, nsocc, nmo int) [][][][]float64 {
 	val := make([][][][]float64, nmo)
 	for i := 0; i < nsocc; i++ {
@@ -323,6 +330,7 @@ func tijab(spin [][][][]float64, spinf *mat.Dense, nsocc, nmo int) [][][][]float
 	return val
 }
 
+// A simple function to represent the kronecker delta.
 func kronk(i, j int) float64 {
 	var val float64
 	if i == j {
@@ -333,6 +341,7 @@ func kronk(i, j int) float64 {
 	return val
 }
 
+// Respresents the tilde tau function in the CCSD intermediate equations.
 func ttau(spin [][][][]float64, tijab [][][][]float64, nmo, nsocc int, tia *mat.Dense) [][][][]float64 {
 	val := make([][][][]float64, nmo)
 	for i := 0; i < nsocc; i++ {
@@ -351,6 +360,7 @@ func ttau(spin [][][][]float64, tijab [][][][]float64, nmo, nsocc int, tia *mat.
 	return val
 }
 
+// Represens the tau function in the CCSD intermediate equations.
 func tau(spin [][][][]float64, tijab [][][][]float64, nmo, nsocc int, tia *mat.Dense) [][][][]float64 {
 	val := make([][][][]float64, nmo)
 	for i := 0; i < nsocc; i++ {
@@ -369,6 +379,7 @@ func tau(spin [][][][]float64, tijab [][][][]float64, nmo, nsocc int, tia *mat.D
 	return val
 }
 
+// F_ae intermediate equation for CCSD.
 func faeint(spinf, tia *mat.Dense, spin [][][][]float64, ttau [][][][]float64, nsocc, nmo int) *mat.Dense {
 	var val float64
 	matrix := mat.NewDense(nmo, nmo, nil)
@@ -390,6 +401,7 @@ func faeint(spinf, tia *mat.Dense, spin [][][][]float64, ttau [][][][]float64, n
 	return matrix
 }
 
+// F_mi intermediate equation for CCSD.
 func fmiint(spinf, tia *mat.Dense, spin [][][][]float64, ttau [][][][]float64, nsocc, nmo int) *mat.Dense {
 	var val float64
 	matrix := mat.NewDense(nmo, nmo, nil)
@@ -411,6 +423,7 @@ func fmiint(spinf, tia *mat.Dense, spin [][][][]float64, ttau [][][][]float64, n
 	return matrix
 }
 
+// F_me intermediate eqaution for CCSD.
 func fmeint(spinf, tia *mat.Dense, spin [][][][]float64, nsocc, nmo int) *mat.Dense {
 	var val float64
 	matrix := mat.NewDense(nmo, nmo, nil)
@@ -428,6 +441,7 @@ func fmeint(spinf, tia *mat.Dense, spin [][][][]float64, nsocc, nmo int) *mat.De
 	return matrix
 }
 
+// W_mnij intermediate equation.
 func wmnij(spin [][][][]float64, nsocc, nmo int, tau [][][][]float64, tia *mat.Dense) [][][][]float64 {
 	array := make([][][][]float64, nmo)
 	for m := 0; m < nsocc; m++ {
@@ -452,6 +466,7 @@ func wmnij(spin [][][][]float64, nsocc, nmo int, tau [][][][]float64, tia *mat.D
 	return array
 }
 
+// W_abef intermediate equation.
 func wabef(spin [][][][]float64, nsocc, nmo int, tau [][][][]float64, tia *mat.Dense) [][][][]float64 {
 	array := make([][][][]float64, nmo)
 	for a := nsocc; a < nmo; a++ {
@@ -476,6 +491,7 @@ func wabef(spin [][][][]float64, nsocc, nmo int, tau [][][][]float64, tia *mat.D
 	return array
 }
 
+// W_mbej intermediate equation.
 func wmbej(spin, tijab [][][][]float64, nsocc, nmo int, tia *mat.Dense) [][][][]float64 {
 	array := make([][][][]float64, nmo)
 	for m := 0; m < nsocc; m++ {
@@ -502,6 +518,7 @@ func wmbej(spin, tijab [][][][]float64, nsocc, nmo int, tia *mat.Dense) [][][][]
 	return array
 }
 
+// Singles denominator term for T1 amplitudes.
 func dia(spinf *mat.Dense, nmo, nsocc int) *mat.Dense {
 	var val float64
 	r := nmo
@@ -515,6 +532,7 @@ func dia(spinf *mat.Dense, nmo, nsocc int) *mat.Dense {
 	return matrix
 }
 
+// Doubles denominator term for T2 amplitudes.
 func dijab(spinf *mat.Dense, nmo, nsocc int) [][][][]float64 {
 	val := make([][][][]float64, nmo)
 	for i := 0; i < nsocc; i++ {
@@ -532,6 +550,7 @@ func dijab(spinf *mat.Dense, nmo, nsocc int) [][][][]float64 {
 	return val
 }
 
+// T1 amplitude equation for CCSD.
 func T1amp(spinf, fae, fmi, fme, dia, tia *mat.Dense, tijab, spin [][][][]float64, nsocc, nmo int) *mat.Dense {
 	var val float64
 	matrix := mat.NewDense(nmo, nmo, nil)
@@ -565,6 +584,7 @@ func T1amp(spinf, fae, fmi, fme, dia, tia *mat.Dense, tijab, spin [][][][]float6
 	return matrix
 }
 
+// T2 amplitude equation for CCSD.
 func T2amp(spinf, fae, fmi, fme, tia *mat.Dense, tijab, spin, wmnij, wabef, wmbej, dijab, tau [][][][]float64, nsocc, nmo int) [][][][]float64 {
 	val := make([][][][]float64, nmo)
 	for i := 0; i < nsocc; i++ {
