@@ -870,6 +870,23 @@ func mohmat(c0, m mat.Matrix) *mat.SymDense {
 	return moh
 }
 
+func CISHam(sof *mat.Dense, spin [][][][]float64, nsocc, nmo int) *mat.SymDense {
+	r := 40
+	var val float64
+	cham := mat.NewSymDense(r, nil)
+	for i := 0; i < nsocc; i++ {
+		for a := nsocc; a < nmo; a++ {
+			for j := 0; j < nsocc; j++ {
+				for b := nsocc; b < nmo; b++ {
+					val = sof.At(a, b)*kronk(i, j) - sof.At(i, j)*kronk(a, b) + spin[a][j][i][b]
+					cham.SetSym(i, j, val)
+				}
+			}
+		}
+	}
+	return cham
+}
+
 func main() {
 	nucrep := enuc("h2o_sto3g/enuc.dat")
 	s := maketrix("h2o_sto3g/s.dat")
@@ -1002,6 +1019,8 @@ func main() {
 	eparant := ept(d3, t3disc, t3conn, nmo, nsocc)
 	fmt.Println("(T) Energy Correction = ", eparant, "\n")
 	fmt.Println("CCSD(T)/STO-3G Energy = ", EHF+firstEcc+eparant, "\n")
+	cham := CISHam(sof, spin, nsocc, nmo)
+	printmat(cham)
 }
 
 // (progn (setq compile-command "time go run .") (recompile))
