@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -853,6 +854,23 @@ func mofockmat(c0, m mat.Matrix) []float64 {
 	return eval
 }
 
+func mfock(c0, m mat.Matrix) *mat.SymDense {
+	r, _ := c0.Dims()
+	mofock := mat.NewSymDense(r, nil)
+	for i := 0; i < r; i++ {
+		for j := 0; j < r; j++ {
+			var sum float64
+			for mu := 0; mu < r; mu++ {
+				for nu := 0; nu < r; nu++ {
+					sum += c0.At(mu, j) * c0.At(nu, i) * m.At(mu, nu)
+				}
+				mofock.SetSym(i, j, sum)
+			}
+		}
+	}
+	return mofock
+}
+
 func mohmat(c0, m mat.Matrix) *mat.SymDense {
 	r, _ := c0.Dims()
 	moh := mat.NewSymDense(r, nil)
@@ -870,21 +888,117 @@ func mohmat(c0, m mat.Matrix) *mat.SymDense {
 	return moh
 }
 
-func CISHam(sof *mat.Dense, spin [][][][]float64, nsocc, nmo int) *mat.SymDense {
-	r := 40
-	var val float64
-	cham := mat.NewSymDense(r, nil)
+func CISHam(sof *mat.Dense, spin [][][][]float64, nsocc, nmo int) []float64 {
+	r := (nmo - nsocc) * nsocc
+	val := make([]float64, 0, r*r)
 	for i := 0; i < nsocc; i++ {
 		for a := nsocc; a < nmo; a++ {
 			for j := 0; j < nsocc; j++ {
 				for b := nsocc; b < nmo; b++ {
-					val = sof.At(a, b)*kronk(i, j) - sof.At(i, j)*kronk(a, b) + spin[a][j][i][b]
-					cham.SetSym(i, j, val)
+					val = append(val, sof.At(a, b)*kronk(i, j)-sof.At(i, j)*kronk(a, b)+spin[a][j][i][b])
 				}
 			}
 		}
 	}
-	return cham
+	cham := mat.NewSymDense(r, val)
+	var eig mat.EigenSym
+	eig.Factorize(cham, true)
+	eval := eig.Values(nil)
+	return eval
+}
+
+func spatCIS(mfmat *mat.SymDense, smarti []float64, nocc, nao int) []float64 {
+	r := (nao - nocc) * nocc
+	val := make([]float64, 0, r*r)
+	for i := 0; i < nocc; i++ {
+		for a := nocc; a < nao; a++ {
+			for j := 0; j < nocc; j++ {
+				for b := nocc; b < nao; b++ {
+					val = append(val, mfmat.At(a, b)*kronk(i, j)-mfmat.At(i, j)*kronk(a, b)+2*smarti[compind(a, i, j, b)]-smarti[compind(a, b, j, i)])
+				}
+			}
+		}
+	}
+	spatcham := mat.NewSymDense(r, val)
+	var eig mat.EigenSym
+	eig.Factorize(spatcham, true)
+	eval := eig.Values(nil)
+	return eval
+}
+
+func amat(sof *mat.Dense, spin [][][][]float64, nsocc, nmo int) *mat.Dense {
+	r := (nmo - nsocc) * nsocc
+	val := make([]float64, 0, r*r)
+	for i := 0; i < nsocc; i++ {
+		for a := nsocc; a < nmo; a++ {
+			for j := 0; j < nsocc; j++ {
+				for b := nsocc; b < nmo; b++ {
+					val = append(val, sof.At(a, b)*kronk(i, j)-sof.At(i, j)*kronk(a, b)+spin[a][j][i][b])
+				}
+			}
+		}
+	}
+	amatrix := mat.NewDense(r, r, val)
+	return amatrix
+}
+
+func bmat(spin [][][][]float64, nsocc, nmo int) *mat.Dense {
+	r := (nmo - nsocc) * nsocc
+	val := make([]float64, 0, r*r)
+	for i := 0; i < nsocc; i++ {
+		for a := nsocc; a < nmo; a++ {
+			for j := 0; j < nsocc; j++ {
+				for b := nsocc; b < nmo; b++ {
+					val = append(val, spin[a][b][i][j])
+				}
+			}
+		}
+	}
+	bmatrix := mat.NewDense(r, r, val)
+	return bmatrix
+}
+
+func RPAdumb(amatr, bmatr *mat.Dense) []float64 {
+	var ab mat.Dense
+	// ab := mat.NewDense(40, 80, nil)
+	ab.Augment(amatr, bmatr)
+	var ba mat.Dense
+	// ba := mat.NewDense(40, 80, nil)
+	ba.Augment(bmatr, amatr)
+	var mat3 mat.Dense
+	// mat3 := mat.NewDense(80, 80, nil)
+	mat3.Augment(ba.T(), ab.T())
+	val := make([]float64, 0)
+	var eig mat.Eigen
+	eig.Factorize(&mat3, mat.EigenLeft)
+	e := eig.Values(nil)
+	for _, value := range e {
+		if imag(value) > 0 {
+			panic("nonzero imag part")
+		}
+		val = append(val, real(value))
+	}
+	sort.Float64s(val)
+	return val
+}
+
+func RPAsmart(amatr, bmatr *mat.Dense) []float64 {
+	var mat1 mat.Dense
+	mat1.Add(amatr, bmatr)
+	var mat2 mat.Dense
+	mat2.Sub(amatr, bmatr)
+	var mat3 mat.Dense
+	mat3.Mul(&mat1, &mat2)
+	val := make([]float64, 0)
+	var eig mat.Eigen
+	eig.Factorize(&mat3, mat.EigenLeft)
+	e := eig.Values(nil)
+	for _, value := range e {
+		val = append(val, math.Sqrt(real(value)))
+	}
+
+	sort.Float64s(val)
+	return val
 }
 
 func main() {
@@ -893,6 +1007,7 @@ func main() {
 	t := maketrix("h2o_sto3g/t.dat")
 	v := maketrix("h2o_sto3g/v.dat")
 	nocc := 5
+	nao := 7
 	nmo := 14
 	nsocc := 10
 	h := madd(t, v)
@@ -1019,8 +1134,44 @@ func main() {
 	eparant := ept(d3, t3disc, t3conn, nmo, nsocc)
 	fmt.Println("(T) Energy Correction = ", eparant, "\n")
 	fmt.Println("CCSD(T)/STO-3G Energy = ", EHF+firstEcc+eparant, "\n")
+	fmt.Println("CIS Energies:", "\n")
+	fmt.Println("Iter:   Hartree:           eV:")
 	cham := CISHam(sof, spin, nsocc, nmo)
-	printmat(cham)
+	iter = 0
+	for i := 0; i < len(cham); i++ {
+		iter++
+		fmt.Printf("%02d %20.12f %20.12f\n", iter, cham[i], 27.2114*cham[i])
+	}
+	fmt.Println("\n")
+	fmt.Println("Spin Adapted Singles:", "\n")
+	fmt.Println("Iter:   Hartree:            eV:")
+	mfmat := mfock(newc, f)
+	spatcham := spatCIS(mfmat, newi, nocc, nao)
+	iter = 0
+	for i := 0; i < len(spatcham); i++ {
+		iter++
+		fmt.Printf("%02d %20.12f %20.12f\n", iter, spatcham[i], 27.2114*spatcham[i])
+	}
+	a := amat(sof, spin, nsocc, nmo)
+	b := bmat(spin, nsocc, nmo)
+	fmt.Println("\n")
+	fmt.Println("RPA... The Dumb Way")
+	fmt.Println("Iter:   Hartree:            eV:")
+	rpadumb := RPAdumb(a, b)
+	iter = 0
+	for i := 0; i < len(rpadumb); i++ {
+		iter++
+		fmt.Printf("%02d %20.12f %20.12f\n", iter, rpadumb[i], 27.2114*rpadumb[i])
+	}
+	fmt.Println("\n")
+	fmt.Println("RPA... The Smart Way")
+	fmt.Println("Iter:   Hartree:            eV:")
+	rpasmart := RPAsmart(a, b)
+	iter = 0
+	for i := 0; i < len(rpasmart); i++ {
+		iter++
+		fmt.Printf("%02d %20.12f %20.12f\n", iter, rpasmart[i], 27.2114*rpasmart[i])
+	}
 }
 
 // (progn (setq compile-command "time go run .") (recompile))
